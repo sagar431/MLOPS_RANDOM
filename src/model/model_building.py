@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pickle
+import os
 from sklearn.ensemble import GradientBoostingClassifier
 import yaml
 import logging
@@ -44,6 +45,8 @@ def load_data(file_path: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(file_path)
         logger.debug('Data loaded from %s', file_path)
+        # Print column names for debugging
+        logger.debug(f'Columns in dataset: {df.columns.tolist()}')
         return df
     except pd.errors.ParserError as e:
         logger.error('Failed to parse the CSV file: %s', e)
@@ -52,20 +55,12 @@ def load_data(file_path: str) -> pd.DataFrame:
         logger.error('Unexpected error occurred while loading the data: %s', e)
         raise
 
-def train_model(X_train: np.ndarray, y_train: np.ndarray, params: dict) -> GradientBoostingClassifier:
-    """Train the Gradient Boosting model."""
-    try:
-        clf = GradientBoostingClassifier(n_estimators=params['n_estimators'], learning_rate=params['learning_rate'])
-        clf.fit(X_train, y_train)
-        logger.debug('Model training completed')
-        return clf
-    except Exception as e:
-        logger.error('Error during model training: %s', e)
-        raise
-
 def save_model(model, file_path: str) -> None:
     """Save the trained model to a file."""
     try:
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
         with open(file_path, 'wb') as file:
             pickle.dump(model, file)
         logger.debug('Model saved to %s', file_path)
@@ -75,18 +70,37 @@ def save_model(model, file_path: str) -> None:
 
 def main():
     try:
-        params = load_params('params.yaml')['model_building']
+        # Load parameters
+        params = load_params('params.yaml')
+        n_estimators = params['model_building']['n_estimators']
+        learning_rate = params['model_building']['learning_rate']
 
+        # Load training data
         train_data = load_data('./data/processed/train_tfidf.csv')
-        X_train = train_data.iloc[:, :-1].values
-        y_train = train_data.iloc[:, -1].values
-
-        clf = train_model(X_train, y_train, params)
         
-        save_model(clf, 'models/model.pkl')
+        # Assuming the last column is the target variable
+        X = train_data.iloc[:, :-1]  # All columns except the last one
+        y = train_data.iloc[:, -1]   # Last column
+        
+        logger.debug(f'Features shape: {X.shape}')
+        logger.debug(f'Target shape: {y.shape}')
+
+        # Initialize and train the model
+        model = GradientBoostingClassifier(
+            n_estimators=n_estimators,
+            learning_rate=learning_rate,
+            random_state=42
+        )
+        model.fit(X, y)
+        logger.debug('Model training completed')
+
+        # Save the trained model
+        save_model(model, 'models/model.pkl')
+
     except Exception as e:
         logger.error('Failed to complete the model building process: %s', e)
         print(f"Error: {e}")
+        raise
 
 if __name__ == '__main__':
     main()
