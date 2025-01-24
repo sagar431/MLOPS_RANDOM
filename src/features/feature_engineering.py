@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 import yaml
 import logging
 
@@ -52,6 +52,30 @@ def load_data(file_path: str) -> pd.DataFrame:
     except Exception as e:
         logger.error('Unexpected error occurred while loading the data: %s', e)
         raise
+
+def get_vectorizer(params):
+    """Create vectorizer based on parameters."""
+    vectorizer_type = params['feature_engineering']['vectorizer']
+    max_features = params['feature_engineering']['max_features']
+    
+    if vectorizer_type == 'tfidf':
+        tfidf_params = params['feature_engineering']['tfidf_params']
+        return TfidfVectorizer(
+            max_features=max_features,
+            min_df=tfidf_params['min_df'],
+            max_df=tfidf_params['max_df'],
+            ngram_range=tuple(tfidf_params['ngram_range'])
+        )
+    elif vectorizer_type == 'bow':
+        bow_params = params['feature_engineering']['bow_params']
+        return CountVectorizer(
+            max_features=max_features,
+            min_df=bow_params['min_df'],
+            max_df=bow_params['max_df'],
+            ngram_range=tuple(bow_params['ngram_range'])
+        )
+    else:
+        raise ValueError(f"Unknown vectorizer type: {vectorizer_type}")
 
 def apply_tfidf(train_data: pd.DataFrame, test_data: pd.DataFrame, max_features: int) -> tuple:
     """Apply TfIdf to the data."""
