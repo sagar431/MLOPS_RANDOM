@@ -2,8 +2,8 @@ data_ingestion:
   test_size: 0.2
 
 feature_engineering:
-  vectorizer: "tfidf"  # Options: "tfidf" or "bow" (bag of words)
-  max_features: 500
+  vectorizer: "bow"  # Options: "tfidf" or "bow" (bag of words)
+  max_features: 10
   # TF-IDF specific parameters
   tfidf_params:
     min_df: 2
